@@ -23,8 +23,9 @@ def generate_random_string():
     return random_string
 
 
-# API_1: Документація в файлі API_DOC.md
-# Генерація короткого посилання по заданому посиланню
+# API_1 Endpoint: /url-shortener
+# Full documentation available in API_DOC.md
+# Generate a short link from the given URL
 @app.route("/url-shortener", methods=["POST"])
 def url_shortener():
 
@@ -40,28 +41,26 @@ def url_shortener():
     url_pattern = "^((http|https)://)[-a-zA-Z0-9@:%._\\+~#?&//=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%._\\+~#?&//=]*)$"
     r = re.compile(url_pattern)
 
-    # завантаження змінних з .env
+    # Load environment variables from .env
     load_dotenv()
-
-    # завантажуємо домен із середовища .env
     domain = os.getenv("MY_DOMAIN")
 
-    # якщо url відповідає паттерну url_pattern (тобто це справжній url)
+    # if the URL matches the url_pattern (i.e., it's a valid/real URL)
     if re.findall(r, url):
 
-        # якщо передається user_id і variation_sku_id
+        # if user_id and variation_sku_id are provided
         if list(user_data.keys()).count("user_id") == 1 and list(user_data.keys()).count("variation_sku_id") == 1:
 
             user_id = user_data["user_id"]
             sku = user_data["variation_sku_id"]
 
-            # якщо url вже існує в базі даних для даного користувача та товару (відповідно, для нього вже є short_part)
+            # if the URL already exists in the database for the given user and product (it already has a short_part)
             if url in sql.find_all_urls_by_user_and_sku([user_id, sku]):
 
-                # знаходимо існуючу short_part
+                # find the existing short_part
                 short_part = sql.find_short_part_for_user_and_sku([url, user_id, sku])
 
-                # знаходимо існуючий short_url
+                # find the existing short_url
                 short_url = sql.find_short_url([short_part])
 
                 result = {"url": url, "user_id": user_id, "variation_sku_id": sku,
@@ -75,21 +74,21 @@ def url_shortener():
 
                 return result
 
-            # якщо url для конкретного користувача user_id і sku не існує в базі даних
+            # if the URL for the specific user_id and SKU does not exist in the database
             else:
-                # генеруємо нову short_part
+                # generate a new short_part
                 short_part = generate_random_string()
 
-                # якщо ця згенерована short_part випадково співпала з вже існуючою послідовністю в базі даних, то генеруємо нову
-                # послідовність, до поки ця згенерована послідовність не стане унікальною
+                # if the generated short_part accidentally matches an existing sequence in the database,
+                # keep generating a new one until the sequence becomes unique
                 while short_part in sql.find_all_short_parts():
                     short_part = generate_random_string()
                     # print("new short part", short_part)
 
-                # як тільки short_part стала унікальною, то створюємо short_url
+                # once the short_part becomes unique, create the short_url
                 short_url = domain + short_part
 
-                # вставляємо всі дані в базу даних в таблицю urls
+                # insert all the data into the database into the urls table
                 sql.insert_into_table_urls_for_user_and_sku([url, user_id, sku, short_part, short_url])
 
                 result = {"url": url, "user_id": user_id, "variation_sku_id": sku,
@@ -103,7 +102,7 @@ def url_shortener():
 
                 return result
 
-        # якщо передається тільки user_id
+        # if only user_id is provided
         elif list(user_data.keys()).count("user_id") == 1 and list(user_data.keys()).count("variation_sku_id") == 0:
 
             result_error = {"url": url,
@@ -117,7 +116,7 @@ def url_shortener():
 
             return result_error
 
-        # якщо передається тільки variation_sku_id
+        # if only variation_sku_id is provided
         elif list(user_data.keys()).count("user_id") == 0 and list(user_data.keys()).count("variation_sku_id") == 1:
 
             result_error = {"url": url,
@@ -131,16 +130,16 @@ def url_shortener():
 
             return result_error
 
-        # якщо передається тільки url
+        # if only url is provided
         else:
 
-            # якщо url вже існує в базі даних (виключаючи url для вказаних user_id і variation_sku_id)
+            # if the URL already exists in the database (excluding URLs for the specified user_id and variation_sku_id)
             if url in sql.find_all_urls():
 
-                # знаходимо існуючу short_part для всіх url, де user_id = '0' AND variation_sku_id = '0'
+                # find the existing short_part for all URLs where user_id = '0' AND variation_sku_id = '0'
                 short_part = sql.find_short_part([url])
 
-                # знаходимо існуючий short_url
+                # find the existing short_url
                 short_url = sql.find_short_url([short_part])
 
                 result = {"url": url, "short_part": short_part, "short_url": short_url,
@@ -153,21 +152,21 @@ def url_shortener():
 
                 return result
 
-            # якщо url не існує в базі даних
+            # if the URL does not exist in the database
             else:
-                # генеруємо нову short_part
+                # generate a new short_part
                 short_part = generate_random_string()
 
-                # якщо ця згенерована short_part випадково співпала з вже існуючою послідовністю в базі даних, то генеруємо нову
-                # послідовність, до поки ця згенерована послідовність не стане унікальною
+                # if the generated short_part accidentally matches an existing sequence in the database,
+                # generate a new sequence until the generated sequence becomes unique
                 while short_part in sql.find_all_short_parts():
                     short_part = generate_random_string()
                     # print("new short part", short_part)
 
-                # як тільки short_part стала унікальною, то створюємо short_url
+                # once the short_part becomes unique, create the short_url
                 short_url = domain + short_part
 
-                # вставляємо дані в базу даних
+                # insert data into the database
                 sql.insert_into_table_urls([url, short_part, short_url])
 
                 result = {"url": url, "short_part": short_part, "short_url": short_url,
@@ -180,9 +179,9 @@ def url_shortener():
 
                 return result
 
-    # якщо url не відповідає патерну
+    # if url does not match the pattern
     else:
-        # якщо передається user_id i variation_sku_id
+        # if user_id and variation_sku_id are provided
         if list(user_data.keys()).count("user_id") == 1 and list(user_data.keys()).count("variation_sku_id") == 1:
 
             result_error = {"url": url,
@@ -195,7 +194,7 @@ def url_shortener():
 
             return result_error
 
-        # якщо передається тільки user_id
+        # if only user_id is provided
         elif list(user_data.keys()).count("user_id") == 1 and list(user_data.keys()).count("variation_sku_id") == 0:
 
             result_error = {"url": url,
@@ -208,7 +207,7 @@ def url_shortener():
 
             return result_error
 
-        # якщо передається тільки variation_sku_id
+        # if only variation_sku_id is provided
         elif list(user_data.keys()).count("user_id") == 0 and list(user_data.keys()).count("variation_sku_id") == 1:
 
             result_error = {"url": url,
@@ -221,7 +220,7 @@ def url_shortener():
 
             return result_error
 
-        # якщо передається тільки url
+        # if only url is provided
         else:
             result_error = {"url": url,
                             "user_id": None,
@@ -234,8 +233,8 @@ def url_shortener():
             return result_error
 
 
-# API_2: Документація в файлі API_DOC.md
-# Робота API через кеш
+# API_2: Documentation is in the file API_DOC.md
+# API works through cache
 @app.route("/<short_part>")
 @cache.cached(timeout=300)          # 5 minutes = 300 seconds
 def find_main_url(short_part):
@@ -246,10 +245,10 @@ def find_main_url(short_part):
 
     if short_part in sql.find_all_short_parts():
 
-        # знаходимо в базі даних url по заданій short_part
+        # find the URL in the database by the given short_part
         main_url = sql.find_url([short_part])
 
-        # записуємо в базу +1 клік та дату кліка
+        # record +1 click and the click date in the database
         sql.update_redirect_clicks([short_part])
 
         result = {"short_part": short_part,
