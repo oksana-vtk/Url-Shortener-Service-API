@@ -3,11 +3,11 @@ from dotenv import load_dotenv
 import os
 
 
-# завантаження змінних з .env
+# Load environment variables from .env
 load_dotenv()
 
 
-# Підключення до бази даних
+# Database connection
 def connect_to_db():
     return mysql.connector.connect(
         host=os.getenv("DB_HOST"),
